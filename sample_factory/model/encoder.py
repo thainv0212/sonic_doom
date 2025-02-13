@@ -371,6 +371,8 @@ def make_img_encoder(cfg: Config, obs_space: ObsSpace) -> Encoder:
         return ConvEncoder(cfg, obs_space)
     elif cfg.encoder_conv_architecture.startswith("resnet"):
         return ResnetEncoder(cfg, obs_space)
+    elif cfg.encoder_conv_architecture.startswith("none"):
+        return None
     else:
         raise NotImplementedError(f"Unknown convolutional architecture {cfg.encoder_conv_architecture}")
 

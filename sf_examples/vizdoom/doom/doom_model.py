@@ -38,14 +38,22 @@ class VizdoomEncoder(Encoder):
         log.debug("Policy head output size: %r", self.get_out_size())
 
     def forward(self, obs_dict):
-        x = self.basic_encoder(obs_dict["img"])
+        if self.basic_encoder is not None:
+            x = self.basic_encoder(obs_dict["img"])
+        else: x = None
 
         if self.measurements_head is not None:
             measurements = self.measurements_head(obs_dict["measurements"].float())
-            x = torch.cat((x, measurements), dim=1)
+            if x is not None:
+                x = measurements
+            else:
+                x = torch.cat((x, measurements), dim=1)
         if self.sound_encoder is not None:
             sound = self.sound_encoder(obs_dict["sound"].float())
-            x = torch.cat((x, sound), dim=1)
+            if x is not None:
+                x = torch.cat((x, sound), dim=1)
+            else:
+                x = sound
         return x
 
     def get_out_size(self) -> int:
