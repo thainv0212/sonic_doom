@@ -19,7 +19,10 @@ class VizdoomEncoder(Encoder):
         # reuse the default image encoder
         self.basic_encoder = make_img_encoder(cfg, obs_space["img"] if "measurements" not in obs_space.keys() else
         obs_space["obs"]["img"])
-        self.encoder_out_size = self.basic_encoder.get_out_size()
+        if self.basic_encoder is not None:
+            self.encoder_out_size = self.basic_encoder.get_out_size()
+        else:
+            self.encoder_out_size = 0
         self.sound_encoder = None
         if cfg.use_sound:
             self.sound_encoder = make_sound_encoder(cfg,
