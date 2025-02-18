@@ -60,7 +60,7 @@ class VizdoomEncoder(Encoder):
             if x is not None:
                 x = torch.cat((x, sound.flatten(start_dim=1)), dim=1)
             else:
-                x = sound
+                x = sound.flatten(start_dim=1)
         return x
 
     def get_out_size(self) -> int:
