@@ -154,7 +154,7 @@ DOOM_ENVS = [
         doom_action_space_discretized_no_weap(),
         1.0,
         2100,
-        extra_wrappers=[ADDITIONAL_INPUT, BATTLE_REWARD_SHAPING],
+        extra_wrappers=[BATTLE_REWARD_SHAPING],
     ),
     DoomSpec(
         "doom_battle2",

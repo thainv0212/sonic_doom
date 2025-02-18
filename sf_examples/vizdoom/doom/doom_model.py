@@ -17,11 +17,14 @@ class VizdoomEncoder(Encoder):
         super().__init__(cfg)
 
         # reuse the default image encoder
-        self.basic_encoder = make_img_encoder(cfg, obs_space["img"])
+        self.basic_encoder = make_img_encoder(cfg, obs_space["img"] if "measurements" not in obs_space.keys() else
+        obs_space["obs"]["img"])
         self.encoder_out_size = self.basic_encoder.get_out_size()
         self.sound_encoder = None
         if cfg.use_sound:
-            self.sound_encoder = make_sound_encoder(cfg, obs_space["sound"])
+            self.sound_encoder = make_sound_encoder(cfg,
+                                                    obs_space["sound"] if "measurements" not in obs_space.keys() else
+                                                    obs_space["obs"]["sound"])
             self.encoder_out_size += self.sound_encoder.get_out_size()
 
         self.measurements_head = None
@@ -40,7 +43,8 @@ class VizdoomEncoder(Encoder):
     def forward(self, obs_dict):
         if self.basic_encoder is not None:
             x = self.basic_encoder(obs_dict["img"])
-        else: x = None
+        else:
+            x = None
 
         if self.measurements_head is not None:
             measurements = self.measurements_head(obs_dict["measurements"].float())

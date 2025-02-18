@@ -37,7 +37,10 @@ def init_tensor(leading_dimensions: List, tensor_type, tensor_shape, device: tor
         tensor_type = to_torch_dtype(tensor_type)
 
     # filter out dimensions with size 0
-    tensor_shape = [x for x in tensor_shape if x]
+    try:
+        tensor_shape = [x for x in tensor_shape if x]
+    except:
+        print('error')
 
     final_shape = leading_dimensions + list(tensor_shape)
     t = torch.zeros(final_shape, dtype=tensor_type)
@@ -87,8 +90,14 @@ def alloc_trajectory_tensors(env_info: EnvInfo, num_traj, rollout, rnn_size, dev
         raise Exception("Only Dict observations spaces are supported")
 
     # we need to allocate an extra rollout step here to calculate the value estimates for the last step
-    for space_name, space in obs_space.spaces.items():
-        tensors["obs"][space_name] = init_tensor([num_traj, rollout + 1], space.dtype, space.shape, device, share)
+    if "measurements" not in obs_space.spaces.keys():
+        for space_name, space in obs_space.spaces.items():
+            tensors["obs"][space_name] = init_tensor([num_traj, rollout + 1], space.dtype, space.shape, device, share)
+    else:
+        tensors["measurements"] = init_tensor([num_traj, rollout + 1], obs_space.spaces["measurements"].dtype,
+                                              obs_space.spaces["measurements"].shape, device, share)
+        for space_name, space in obs_space.spaces["obs"].items():
+            tensors["obs"][space_name] = init_tensor([num_traj, rollout + 1], space.dtype, space.shape, device, share)
     tensors["rnn_states"] = init_tensor([num_traj, rollout + 1], torch.float32, [rnn_size], device, share)
 
     num_actions, num_action_distribution_parameters = action_info(env_info)

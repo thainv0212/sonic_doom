@@ -122,13 +122,22 @@ class RunningMeanStdDictInPlace(nn.Module):
     ):
         super(RunningMeanStdDictInPlace, self).__init__()
         self.obs_space: Final = obs_space
-        self.running_mean_std = nn.ModuleDict(
-            {
-                k: RunningMeanStdInPlace(space.shape, epsilon, clip, per_channel, norm_only)
-                for k, space in obs_space.spaces.items()
-                if keys_to_normalize is None or k in keys_to_normalize
-            }
-        )
+        if "measurements" not in obs_space.spaces.keys():
+            self.running_mean_std = nn.ModuleDict(
+                {
+                    k: RunningMeanStdInPlace(space.shape, epsilon, clip, per_channel, norm_only)
+                    for k, space in obs_space.spaces.items()
+                    if keys_to_normalize is None or k in keys_to_normalize
+                }
+            )
+        else:
+            self.running_mean_std = nn.ModuleDict(
+                {
+                    k: RunningMeanStdInPlace(space.shape, epsilon, clip, per_channel, norm_only)
+                    for k, space in obs_space.spaces["obs"].items()
+                    if keys_to_normalize is None or k in keys_to_normalize
+                }
+            )
 
     def forward(self, x: Dict[str, Tensor]) -> None:
         """Normalize in-place!"""
