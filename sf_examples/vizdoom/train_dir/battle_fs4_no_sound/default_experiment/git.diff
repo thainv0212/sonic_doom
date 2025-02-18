@@ -1,0 +1,132 @@
+diff --git a/sample_factory/cfg/cfg.py b/sample_factory/cfg/cfg.py
+index 52e29c7..1dd3ac4 100644
+--- a/sample_factory/cfg/cfg.py
++++ b/sample_factory/cfg/cfg.py
+@@ -523,7 +523,7 @@ def add_model_args(p: ArgumentParser):
+     p.add_argument(
+         "--encoder_conv_architecture",
+         default="convnet_simple",
+-        choices=["convnet_simple", "convnet_impala", "convnet_atari", "resnet_impala"],
++        choices=["convnet_simple", "convnet_impala", "convnet_atari", "resnet_impala", "none"],
+         type=str,
+         help="Architecture of the convolutional encoder. See models.py for details. "
+         "VizDoom and DMLab examples demonstrate how to define custom architectures.",
+diff --git a/sf_examples/vizdoom/doom/doom_model.py b/sf_examples/vizdoom/doom/doom_model.py
+index 16506af..696c1c6 100644
+--- a/sf_examples/vizdoom/doom/doom_model.py
++++ b/sf_examples/vizdoom/doom/doom_model.py
+@@ -51,7 +51,7 @@ class VizdoomEncoder(Encoder):
+         if self.sound_encoder is not None:
+             sound = self.sound_encoder(obs_dict["sound"].float())
+             if x is not None:
+-                x = torch.cat((x, sound), dim=1)
++                x = torch.cat((x, sound.flatten(start_dim=1)), dim=1)
+             else:
+                 x = sound
+         return x
+diff --git a/sf_examples/vizdoom/experiments/doom_basic.py b/sf_examples/vizdoom/experiments/doom_basic.py
+index 46c1d78..1c9a124 100644
+--- a/sf_examples/vizdoom/experiments/doom_basic.py
++++ b/sf_examples/vizdoom/experiments/doom_basic.py
+@@ -7,13 +7,49 @@ _params = ParamGrid(
+     ]
+ )
+ 
+-_experiment = Experiment(
+-    "doom_basic",
+-    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False",
++_experiment_no_sound = Experiment(
++    "doom_basic_no_sound",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --train_dir=train_dir/doom_basic_no_sound",
++    _params.generate_params(randomize=False),
++)
++_experiment_vision_sound_fft = Experiment(
++    "doom_basic_vision_fft",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=fft --train_dir=train_dir/doom_basic_vision_fft",
++    _params.generate_params(randomize=False),
++)
++_experiment_vision_sound_raw = Experiment(
++    "doom_basic_vision_raw",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=raw --train_dir=train_dir/doom_basic_vision_raw",
++    _params.generate_params(randomize=False),
++)
++_experiment_vision_sound_mel = Experiment(
++    "doom_basic_vision_mel",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=mel --train_dir=train_dir/doom_basic_vision_mel",
++    _params.generate_params(randomize=False),
++)
++_experiment_no_vision_sound_mel = Experiment(
++    "doom_basic_no_vision_mel",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=mel --encoder_conv_architecture --train_dir=train_dir/doom_basic_no_vision_mel",
++    _params.generate_params(randomize=False),
++)
++_experiment_no_vision_sound_fft = Experiment(
++    "doom_basic_no_vision_fft",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=fft --encoder_conv_architecture --train_dir=train_dir/doom_basic_no_vision_fft",
++    _params.generate_params(randomize=False),
++)
++_experiment_no_vision_sound_raw = Experiment(
++    "doom_basic_no_vision_raw",
++    "python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=2000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=raw --encoder_conv_architecture --train_dir=train_dir/doom_basic_no_vision_raw",
+     _params.generate_params(randomize=False),
+ )
+ 
+-RUN_DESCRIPTION = RunDescription("doom_basic", experiments=[_experiment])
++RUN_DESCRIPTION = RunDescription("doom_basic", experiments=[_experiment_no_sound,
++                                                            _experiment_vision_sound_fft,
++                                                            _experiment_vision_sound_raw,
++                                                            _experiment_vision_sound_mel,
++                                                            _experiment_no_vision_sound_mel,
++                                                            _experiment_no_vision_sound_fft,
++                                                            _experiment_no_vision_sound_raw])
+ 
+ # To run:
+ # python -m sample_factory.launcher.run --run=sf_examples.vizdoom.experiments.doom_basic --backend=processes --num_gpus=1 --max_parallel=2  --pause_between=0 --experiments_per_gpu=2
+diff --git a/sf_examples/vizdoom/experiments/doom_battle_battle2_appo.py b/sf_examples/vizdoom/experiments/doom_battle_battle2_appo.py
+index c6a2d81..4e7e197 100644
+--- a/sf_examples/vizdoom/experiments/doom_battle_battle2_appo.py
++++ b/sf_examples/vizdoom/experiments/doom_battle_battle2_appo.py
+@@ -10,11 +10,40 @@ _params = ParamGrid(
+ 
+ _experiments = [
+     Experiment(
+-        "battle_fs4",
+-        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0",
++        "battle_fs4_no_sound",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_no_sound",
++        _params.generate_params(randomize=False),
++    ),
++    Experiment(
++        "battle_fs4_sound_raw",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_sound_raw --audio_encoder=raw --use_sound",
++        _params.generate_params(randomize=False),
++    ),
++    Experiment(
++        "battle_fs4_sound_fft",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_sound_fft --audio_encoder=fft --use_sound",
++        _params.generate_params(randomize=False),
++    ),
++    Experiment(
++        "battle_fs4_sound_mel",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_sound_mel --audio_encoder=mel --use_sound",
++        _params.generate_params(randomize=False),
++    ),
++    Experiment(
++        "battle_fs4_no_vision_raw",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_no_vision_raw --audio_encoder=raw --use_sound",
++        _params.generate_params(randomize=False),
++    ),
++    Experiment(
++        "battle_fs4_no_vision_fft",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_no_vision_fft --audio_encoder=fft --use_sound",
++        _params.generate_params(randomize=False),
++    ),
++Experiment(
++        "battle_fs4_no_vision_mel",
++        "python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=4000000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=16 --num_envs_per_worker=20 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False --max_grad_norm=0.0 --train_dir=train_dir/battle_fs4_no_vision_mel --audio_encoder=mel --use_sound",
+         _params.generate_params(randomize=False),
+     ),
+ ]
+ 
+-
+ RUN_DESCRIPTION = RunDescription("doom_battle_battle2_appo_v1.121.2", experiments=_experiments)
