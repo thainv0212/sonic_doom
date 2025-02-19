@@ -66,21 +66,21 @@ for env in envs:
     _experiments.append(
         Experiment(
             "basic_envs_fs4_no_vision_mel",
-            f"python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env={env} --use_sound --audio_encoder=mel --train_dir=train_dir/{env}_vision_mel --encoder_conv_architecture=none",
+            f"python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env={env} --use_sound --audio_encoder=mel --train_dir=train_dir/{env}_no_vision_mel --encoder_conv_architecture=none",
             _params.generate_params(randomize=False),
         )
     )
     _experiments.append(
         Experiment(
             "basic_envs_fs4_no_vision_fft",
-            f"python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env={env} --use_sound --audio_encoder=fft --train_dir=train_dir/{env}_vision_fft --encoder_conv_architecture=none",
+            f"python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env={env} --use_sound --audio_encoder=fft --train_dir=train_dir/{env}_no_vision_fft --encoder_conv_architecture=none",
             _params.generate_params(randomize=False),
         )
     )
     _experiments.append(
         Experiment(
             "basic_envs_fs4_no_vision_fft",
-            f"python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env={env} --use_sound --audio_encoder=raw --train_dir=train_dir/{env}_vision_raw --encoder_conv_architecture=none",
+            f"python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env={env} --use_sound --audio_encoder=raw --train_dir=train_dir/{env}_no_vision_raw --encoder_conv_architecture=none",
             _params.generate_params(randomize=False),
         )
     )
