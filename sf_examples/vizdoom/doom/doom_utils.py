@@ -12,7 +12,7 @@ from sample_factory.envs.env_wrappers import (
     RecordingWrapper,
     ResizeWrapper,
     RewardScalingWrapper,
-    TimeLimitWrapper,has_image_observations
+    TimeLimitWrapper, has_image_observations
 )
 from sample_factory.utils.utils import debug_log_every_n
 from sf_examples.vizdoom.doom.action_space import (
@@ -41,17 +41,17 @@ import numpy as np
 
 class DoomSpec:
     def __init__(
-        self,
-        name,
-        env_spec_file,
-        action_space,
-        reward_scaling=1.0,
-        default_timeout=-1,
-        num_agents=1,
-        num_bots=0,
-        respawn_delay=0,
-        timelimit=4.0,
-        extra_wrappers=None,
+            self,
+            name,
+            env_spec_file,
+            action_space,
+            reward_scaling=1.0,
+            default_timeout=-1,
+            num_agents=1,
+            num_bots=0,
+            respawn_delay=0,
+            timelimit=4.0,
+            extra_wrappers=None,
     ):
         self.name = name
         self.env_spec_file = env_spec_file
@@ -84,7 +84,6 @@ DEATHMATCH_REWARD_SHAPING = (
     DoomRewardShapingWrapper,
     dict(reward_shaping_scheme=REWARD_SHAPING_DEATHMATCH_V1, true_objective_func=true_objective_winning_the_game),
 )
-
 
 DOOM_ENVS = [
     DoomSpec(
@@ -174,7 +173,18 @@ DOOM_ENVS = [
         num_agents=1,
         num_bots=1,
         respawn_delay=2,
-        extra_wrappers=[ADDITIONAL_INPUT, BOTS_REWARD_SHAPING],
+        extra_wrappers=[BOTS_REWARD_SHAPING],
+    ),
+    DoomSpec(
+        "doom_duel_multi",
+        "ssl2.cfg",
+        doom_action_space_full_discretized(with_use=True),
+        1.0,
+        int(1e9),
+        num_agents=2,
+        num_bots=0,
+        respawn_delay=2,
+        extra_wrappers=[BOTS_REWARD_SHAPING],
     ),
     DoomSpec(
         "doom_deathmatch_bots",
@@ -214,6 +224,7 @@ DOOM_ENVS = [
     # we measure throughput with 128x72 input resolution, 4-frameskip and original game resolution of 160x120
     # (no widescreen)
     DoomSpec("doom_benchmark", "battle.cfg", Discrete(1 + 8), 1.0, 2100),
+    DoomSpec("doom_take_cover", "take_cover.cfg", Discrete(1 + 2), 1.0, -1),
 ]
 
 
@@ -226,18 +237,18 @@ def doom_env_by_name(name):
 
 # noinspection PyUnusedLocal
 def make_doom_env_impl(
-    doom_spec,
-    cfg=None,
-    env_config=None,
-    skip_frames=None,
-    episode_horizon=None,
-    player_id=None,
-    num_agents=None,
-    max_num_players=None,
-    num_bots=0,  # for multi-agent
-    custom_resolution=None,
-    render_mode: Optional[str] = None,
-    **kwargs,
+        doom_spec,
+        cfg=None,
+        env_config=None,
+        skip_frames=None,
+        episode_horizon=None,
+        player_id=None,
+        num_agents=None,
+        max_num_players=None,
+        num_bots=0,  # for multi-agent
+        custom_resolution=None,
+        render_mode: Optional[str] = None,
+        **kwargs,
 ):
     skip_frames = skip_frames if skip_frames is not None else cfg.env_frameskip
 
@@ -320,6 +331,7 @@ def make_doom_env_impl(
         env = RewardScalingWrapper(env, doom_spec.reward_scaling)
 
     return env
+
 
 class CustomResizeWrapper(gym.core.Wrapper):
     """Resize observation frames to specified (w,h) and convert to grayscale."""
@@ -460,6 +472,7 @@ class CustomPixelFormatWrapper(ObservationWrapper):
         else:
             observation = self._transpose(observation)
         return observation
+
 
 def make_doom_multiplayer_env(doom_spec, cfg=None, env_config=None, render_mode: Optional[str] = None, **kwargs):
     skip_frames = cfg.env_frameskip
