@@ -17,6 +17,8 @@ from vizdoom.vizdoom import AutomapMode, DoomGame, Mode, ScreenResolution
 
 from sample_factory.algo.utils.spaces.discretized import Discretized
 from sample_factory.utils.utils import log, project_tmp_dir
+import vizdoom as vzd
+import math
 
 
 def doom_lock_file(max_parallel):
@@ -81,16 +83,18 @@ def key_to_action_default(key):
 
 class VizdoomEnv(gym.Env):
     def __init__(
-        self,
-        action_space,
-        config_file,
-        coord_limits=None,
-        max_histogram_length=200,
-        show_automap=False,
-        skip_frames=1,
-        async_mode=False,
-        record_to=None,
-        render_mode: Optional[str] = None,
+            self,
+            action_space,
+            config_file,
+            coord_limits=None,
+            max_histogram_length=200,
+            show_automap=False,
+            skip_frames=1,
+            async_mode=False,
+            record_to=None,
+            render_mode: Optional[str] = None,
+            use_auto_aim_support: bool = False,
+            use_sonic_aim_support: bool = False
     ):
         self.initialized = False
 
@@ -174,6 +178,8 @@ class VizdoomEnv(gym.Env):
         self.render_mode = render_mode
 
         self.seed()
+        self.use_auto_aim_support = use_auto_aim_support
+        self.use_sonic_aim_support = use_sonic_aim_support
 
     def seed(self, seed: Optional[int] = None):
         """
@@ -181,19 +187,20 @@ class VizdoomEnv(gym.Env):
         If None is passed, the seed is generated randomly.
         """
         self.rng, self.curr_seed = seeding.np_random(seed=seed)
-        self.curr_seed = self.curr_seed % (2**32)  # Doom only supports 32-bit seeds
+        self.curr_seed = self.curr_seed % (2 ** 32)  # Doom only supports 32-bit seeds
         return [self.curr_seed, self.rng]
 
     def calc_observation_space(self):
         self.aud_len = 2520
         sound_high = [[32767, 32767]] * self.aud_len
         sound_low = [[-32767, -32767]] * self.aud_len
-        self.observation_space_img = gym.spaces.Box(0, 255, (self.screen_h, self.screen_w, self.channels), dtype=np.uint8)
+        self.observation_space_img = gym.spaces.Box(0, 255, (self.screen_h, self.screen_w, self.channels),
+                                                    dtype=np.uint8)
         self.observation_space = gym.spaces.Dict({
             'img': self.observation_space_img,
             'sound': gym.spaces.Box(
-                    low=np.array(sound_low, dtype=np.int16), high=np.array(sound_high, dtype=np.int16),
-                ),
+                low=np.array(sound_low, dtype=np.int16), high=np.array(sound_high, dtype=np.int16),
+            ),
         })
 
     def _set_game_mode(self, mode):
@@ -214,6 +221,8 @@ class VizdoomEnv(gym.Env):
         self.game.set_audio_buffer_enabled(True)
         self.game.set_audio_sampling_rate(SamplingRate.SR_22050)
         self.game.set_audio_buffer_size(self.skip_frames)
+        if self.use_auto_aim_support:
+            self.game.set_available_buttons(self.game.get_available_buttons() + [vzd.Button.TURN_LEFT_RIGHT_DELTA])
 
         if mode == "algo":
             self.game.set_window_visible(False)
@@ -384,7 +393,8 @@ class VizdoomEnv(gym.Env):
 
         self._num_episodes += 1
 
-        return {'img': np.transpose(img, (1, 2, 0)),'audio': audio}, {}  # since Gym 0.26.0, we return dict as second return value
+        return {'img': np.transpose(img, (1, 2, 0)),
+                'audio': audio}, {}  # since Gym 0.26.0, we return dict as second return value
 
     def _convert_actions(self, actions):
         """Convert actions from gym action space to the action space expected by Doom game."""
@@ -450,7 +460,7 @@ class VizdoomEnv(gym.Env):
 
         self._vizdoom_variables_bug_workaround(info, done)
 
-        return {'img': observation, 'audio':  audio_buffer}, done, info
+        return {'img': observation, 'audio': audio_buffer}, done, info
 
     def step(self, actions) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """
@@ -464,6 +474,10 @@ class VizdoomEnv(gym.Env):
         else:
             actions_flattened = self._convert_actions(actions)
 
+        if self.use_auto_aim_support:
+            turn_left, turn_right = auto_aim(-1, 45, self.game.state.objects, P_Name="DoomPlayer")
+            turn_delta = (turn_right - turn_left) * 3
+            actions_flattened += [turn_delta]
         default_info = {"num_frames": self.skip_frames}
         reward = self.game.make_action(actions_flattened, self.skip_frames)
         state = self.game.get_state()
@@ -711,3 +725,110 @@ class VizdoomEnv(gym.Env):
 
         log.info("Finishing replay")
         doom.close()
+
+
+# Enemy health values (Doom II standard + Others found in ViZDoom)
+ENEMY_HEALTH = {
+    "Zombieman": 20, "ShotgunGuy": 30, "ChaingunGuy": 70, "MarineChainsawVzd": 70, "DoomImp": 60,
+    "Demon": 150, "Spectre": 150, "Cacodemon": 400, "HellKnight": 500,
+    "BaronOfHell": 1000, "Arachnotron": 500, "Revenant": 300, "Fatso": 600,
+    "PainElemental": 400, "Archvile": 700, "SpiderMastermind": 3000,
+    "Cyberdemon": 4000, "WolfensteinSS": 50, "LostSoul": 100
+}
+
+def auto_aim(Distance_T, Angle_T, objects, P_Name="DoomPlayer"):
+    """
+    Auto-aim system for ViZDoom that prioritizes closer enemies and those with higher base HP.
+
+    Parameters:
+    - Distance_T: Max range for auto-aim (-1 for unlimited).
+    - Angle_T: Max angl-e for auto-aim (-1 for unlimited).
+    - objects: List of objects from the game state.
+    - player_names: List of potential player names (default includes AI and human players).
+
+    Returns:
+    - TurnLeft: Speed of turning left (0 if not turning left)
+    - TurnRight: Speed of turning right (0 if not turning right)
+    """
+
+    # Initialize variables
+    Player_Coordination = None
+    Player_Angle = None
+    Target_Enemy = None
+    Target_Distance = float("inf")
+    Target_Angle = None
+    Target_HP = -1  # Start with lowest possible HP so stronger enemies are prioritized
+
+    # Locate player
+    for obj in objects:
+        if obj.name == P_Name:
+            Player_Coordination = [obj.position_x, obj.position_y]
+            Player_Angle = obj.angle
+            break
+    else:
+        # print("[DEBUG] ❌ Player not found! Aim assist disabled.")
+        return 0, 0  # No action taken
+
+    # Process enemies and find the best one to aim at
+    for obj in objects:
+        if obj.name in ENEMY_HEALTH:
+            enemy_pos = [obj.position_x, obj.position_y]
+
+            # Calculate distance from player
+            distance = math.sqrt(
+                (enemy_pos[0] - Player_Coordination[0]) ** 2 +
+                (enemy_pos[1] - Player_Coordination[1]) ** 2
+            )
+
+            # Calculate angle difference (in degrees)
+            angle_to_enemy = math.degrees(math.atan2(
+                enemy_pos[1] - Player_Coordination[1],
+                enemy_pos[0] - Player_Coordination[0]
+            ))
+            angle_diff = angle_to_enemy - Player_Angle
+
+            # Normalize angle difference (-180 to 180 degrees)
+            angle_diff = (angle_diff + 180) % 360 - 180
+
+            # Debugging Output
+            # print(f"[DEBUG] 🔍 Checking enemy {obj.name} at distance {distance:.2f}, angle diff {angle_diff:.2f}")
+
+            # Ensure enemy detection is within allowed range
+            if (Distance_T == -1 or distance <= Distance_T) and \
+                    (Angle_T == -1 or abs(angle_diff) <= Angle_T):
+
+                # Get enemy base HP
+                enemy_hp = ENEMY_HEALTH[obj.name]
+
+                # Prioritize closest first, then highest HP if distances are equal
+                if distance < Target_Distance or (distance == Target_Distance and enemy_hp > Target_HP):
+                    Target_Enemy = obj
+                    Target_Distance = distance
+                    Target_Angle = angle_diff
+                    Target_HP = enemy_hp
+
+    if Target_Enemy is None:
+        # print("[DEBUG] ❌ No valid targets in range.")
+        return 0, 0  # No action taken
+
+    # print(f"[DEBUG] 🎯 Auto-aiming at: {Target_Enemy.name} | Distance: {Target_Distance:.2f} | HP: {Target_HP} | Angle Diff: {Target_Angle:.2f}")
+
+    # Adjust turn speed dynamically
+    turn_speed = min(abs(Target_Angle) * 0.1, 1)
+
+    # Introduce dead zone to prevent jitter
+    if abs(Target_Angle) < 1:  # If already almost aligned, don't turn
+        turn_speed = 0
+    else:
+        turn_speed = min(abs(Target_Angle) * 0.1, 1)  # Normal speed scaling
+
+    # Normalize angle difference (-180 to 180 degrees)
+    Target_Angle = (Target_Angle + 180) % 360 - 180
+    # print(f"[DEBUG] Angle Diff: {Target_Angle:.2f}")
+    # Adjust turn direction based on angle
+    if Target_Angle < 0:
+        return 0, turn_speed  # Turn Right
+    elif Target_Angle > 0:
+        return turn_speed, 0  # Turn Left
+    else:
+        return 0, 0  # No movement (inside dead zone)

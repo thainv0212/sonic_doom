@@ -653,6 +653,16 @@ def add_default_env_args(p: ArgumentParser):
         type=str2bool,
         help="Add wrapper to each env which will count the number of episodes for each env.",
     )
+    p.add_argument(
+        "--use_auto_aim_support",
+        action="store_true",
+        help="Whether to use automatic aiming support",
+    )
+    p.add_argument(
+        "--use_sonic_aim_support",
+        action="store_true",
+        help="Whether to use sonic aiming support",
+    )
 
 
 def add_eval_args(parser):
