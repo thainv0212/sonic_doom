@@ -262,6 +262,8 @@ def make_doom_env_impl(
             skip_frames=skip_frames,
             async_mode=async_mode,
             render_mode=render_mode,
+            use_auto_aim_support=cfg['use_auto_aim_support'],
+            use_sonic_aim_support=cfg['use_sonic_aim_support'],
         )
     else:
         timelimit = cfg.timelimit if cfg.timelimit is not None else doom_spec.timelimit

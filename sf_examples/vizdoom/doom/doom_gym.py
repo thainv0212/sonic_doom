@@ -223,6 +223,7 @@ class VizdoomEnv(gym.Env):
         self.game.set_audio_buffer_size(self.skip_frames)
         if self.use_auto_aim_support:
             self.game.set_available_buttons(self.game.get_available_buttons() + [vzd.Button.TURN_LEFT_RIGHT_DELTA])
+            self.game.set_objects_info_enabled(True)
 
         if mode == "algo":
             self.game.set_window_visible(False)
@@ -475,7 +476,7 @@ class VizdoomEnv(gym.Env):
             actions_flattened = self._convert_actions(actions)
 
         if self.use_auto_aim_support:
-            turn_left, turn_right = auto_aim(-1, 45, self.game.state.objects, P_Name="DoomPlayer")
+            turn_left, turn_right = auto_aim(-1, 45, self.game.get_state().objects, P_Name="DoomPlayer")
             turn_delta = (turn_right - turn_left) * 3
             actions_flattened += [turn_delta]
         default_info = {"num_frames": self.skip_frames}
