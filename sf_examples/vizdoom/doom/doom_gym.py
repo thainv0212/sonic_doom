@@ -231,6 +231,7 @@ class VizdoomEnv(gym.Env):
 
         if self.use_sonic_aim_support:
             self.game.add_game_args("-file ./sf_examples/vizdoom/doom/scenarios/sound.wad")
+            self.game.set_objects_info_enabled(True)
             # self.game.set_console_enabled(True)
 
         if mode == "algo":
@@ -878,7 +879,7 @@ def sonic_aim(Distance_T, Angle_T, objects, game, last_play_time, P_Name="DoomPl
             Player_Angle = obj.angle
             break
     else:
-        return  # No sound played
+        return last_play_time# No sound played
 
     # Find the closest enemy within Angle_T
     for obj in objects:
@@ -916,7 +917,7 @@ def sonic_aim(Distance_T, Angle_T, objects, game, last_play_time, P_Name="DoomPl
                     Target_HP = enemy_hp
 
     if Target_Enemy is None:
-        return  # No sound played
+        return last_play_time# No sound played
 
     # 🔊 Play sound only if enemy is within `Angle_T`
     current_time = time.time()
