@@ -226,8 +226,8 @@ class VizdoomEnv(gym.Env):
             self.game.set_available_buttons(self.game.get_available_buttons() + [vzd.Button.TURN_LEFT_RIGHT_DELTA])
             self.game.set_objects_info_enabled(True)
 
-        if self.use_auto_aim_support:
-            self.game.set_console_enabled(True)
+        # if self.use_auto_aim_support:
+        #     self.game.set_console_enabled(True)
 
         if self.use_sonic_aim_support:
             self.game.add_game_args("-file ./sf_examples/vizdoom/doom/scenarios/sound.wad")
@@ -242,6 +242,7 @@ class VizdoomEnv(gym.Env):
             raise Exception("Unsupported mode")
 
         self._set_game_mode(mode)
+        self.last_sonic_time = time.time()
 
     def _game_init(self, with_locking=True, max_parallel=10):
         lock_file = lock = None
