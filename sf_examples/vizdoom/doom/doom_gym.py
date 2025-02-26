@@ -180,6 +180,7 @@ class VizdoomEnv(gym.Env):
         self.seed()
         self.use_auto_aim_support = use_auto_aim_support
         self.use_sonic_aim_support = use_sonic_aim_support
+        self.last_sonic_time = time.time()
 
     def seed(self, seed: Optional[int] = None):
         """
@@ -224,6 +225,13 @@ class VizdoomEnv(gym.Env):
         if self.use_auto_aim_support:
             self.game.set_available_buttons(self.game.get_available_buttons() + [vzd.Button.TURN_LEFT_RIGHT_DELTA])
             self.game.set_objects_info_enabled(True)
+
+        if self.use_auto_aim_support:
+            self.game.set_console_enabled(True)
+
+        if self.use_sonic_aim_support:
+            self.game.add_game_args("-file ./sf_examples/vizdoom/doom/scenarios/sound.wad")
+            self.game.set_console_enabled(True)
 
         if mode == "algo":
             self.game.set_window_visible(False)
@@ -479,6 +487,8 @@ class VizdoomEnv(gym.Env):
             turn_left, turn_right = auto_aim(-1, 45, self.game.get_state().objects, P_Name="DoomPlayer")
             turn_delta = (turn_right - turn_left) * 3
             actions_flattened += [turn_delta]
+        if self.use_sonic_aim_support:
+            self.last_sonic_time = sonic_aim(500, 45, self.game.get_state().objects, self.game, self.last_sonic_time)
         default_info = {"num_frames": self.skip_frames}
         reward = self.game.make_action(actions_flattened, self.skip_frames)
         state = self.game.get_state()
@@ -737,6 +747,7 @@ ENEMY_HEALTH = {
     "Cyberdemon": 4000, "WolfensteinSS": 50, "LostSoul": 100
 }
 
+
 def auto_aim(Distance_T, Angle_T, objects, P_Name="DoomPlayer"):
     """
     Auto-aim system for ViZDoom that prioritizes closer enemies and those with higher base HP.
@@ -833,3 +844,87 @@ def auto_aim(Distance_T, Angle_T, objects, P_Name="DoomPlayer"):
         return turn_speed, 0  # Turn Left
     else:
         return 0, 0  # No movement (inside dead zone)
+
+
+def sonic_aim(Distance_T, Angle_T, objects, game, last_play_time, P_Name="DoomPlayer"):
+    """
+    Sonic-based enemy awareness system for ViZDoom.
+    Plays a pre-recorded sound that increases in volume as the enemy is directly in front of the player.
+
+    Parameters:
+    - Distance_T: Max range for sound trigger (-1 for unlimited).
+    - Angle_T: Max angle for enemy detection (-1 for unlimited).
+    - objects: List of objects from the game state.
+    - game: The ViZDoom game instance to send sound commands.
+    - P_Name: Player's name (default is "DoomPlayer").
+
+    Returns:
+    - None (only plays a sound)
+    """
+
+    # global last_play_time  # Track last sound play time
+    sound_duration = 0.2  # Adjust based on actual length of "saim" sound
+    # Initialize variables
+    Target_Enemy = None
+    Target_Distance = float("inf")
+    Target_Angle = None
+    Target_HP = -1
+
+    # Locate player
+    for obj in objects:
+        if obj.name == P_Name:
+            Player_Coordination = [obj.position_x, obj.position_y]
+            Player_Angle = obj.angle
+            break
+    else:
+        return  # No sound played
+
+    # Find the closest enemy within Angle_T
+    for obj in objects:
+        if obj.name in ENEMY_HEALTH:
+            enemy_pos = [obj.position_x, obj.position_y]
+
+            # Calculate distance from player
+            distance = math.sqrt(
+                (enemy_pos[0] - Player_Coordination[0]) ** 2 +
+                (enemy_pos[1] - Player_Coordination[1]) ** 2
+            )
+
+            # Calculate angle difference (in degrees)
+            angle_to_enemy = math.degrees(math.atan2(
+                enemy_pos[1] - Player_Coordination[1],
+                enemy_pos[0] - Player_Coordination[0]
+            ))
+            angle_diff = angle_to_enemy - Player_Angle
+
+            # Normalize angle difference (-180 to 180 degrees)
+            angle_diff = (angle_diff + 180) % 360 - 180
+
+            # Ensure enemy detection is within allowed range
+            if (Distance_T == -1 or distance <= Distance_T) and \
+                    (Angle_T == -1 or abs(angle_diff) <= Angle_T):
+
+                # Get enemy base HP
+                enemy_hp = ENEMY_HEALTH[obj.name]
+
+                # Prioritize closest first, then highest HP if distances are equal
+                if distance < Target_Distance or (distance == Target_Distance and enemy_hp > Target_HP):
+                    Target_Enemy = obj
+                    Target_Distance = distance
+                    Target_Angle = angle_diff
+                    Target_HP = enemy_hp
+
+    if Target_Enemy is None:
+        return  # No sound played
+
+    # 🔊 Play sound only if enemy is within `Angle_T`
+    current_time = time.time()
+
+    if abs(Target_Angle) <= Angle_T and (current_time - last_play_time >= sound_duration):
+        # Choose the closest sound file based on angle alignment
+        volume_index = round((1.0 - (abs(Target_Angle) / Angle_T)) * 10)  # Scale to 0-10
+        volume_index = max(0, min(10, volume_index))  # Ensure it stays within 0-10
+
+        # Play the appropriate sound file
+        game.send_game_command(f"playsound saim_{volume_index}")
+    return current_time
