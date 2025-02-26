@@ -231,7 +231,7 @@ class VizdoomEnv(gym.Env):
 
         if self.use_sonic_aim_support:
             self.game.add_game_args("-file ./sf_examples/vizdoom/doom/scenarios/sound.wad")
-            self.game.set_console_enabled(True)
+            # self.game.set_console_enabled(True)
 
         if mode == "algo":
             self.game.set_window_visible(False)
