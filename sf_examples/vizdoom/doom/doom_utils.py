@@ -232,6 +232,7 @@ DOOM_ENVS = [
     # (no widescreen)
     DoomSpec("doom_benchmark", "battle.cfg", Discrete(1 + 8), 1.0, 2100),
     DoomSpec("doom_take_cover", "take_cover.cfg", Discrete(1 + 2), 1.0, -1),
+    DoomSpec("doom_predict_position", "predict_position.cfg", Discrete(1 + 3), 1.0, 300),
 ]
 
 
