@@ -94,6 +94,13 @@ DOOM_ENVS = [
         default_timeout=300,
     ),
     DoomSpec(
+        "doom_basic_new_design",
+        "basic_new_design.cfg",
+        Discrete(1 + 3),  # idle, left, right, attack
+        reward_scaling=0.01,
+        default_timeout=300,
+    ),
+    DoomSpec(
         "doom_two_colors_easy",
         "two_colors_easy.cfg",
         doom_action_space_basic(),
