@@ -337,8 +337,9 @@ class VizdoomEnv(gym.Env):
     def _game_variables_dict(self, state):
         game_variables = state.game_variables
         variables = {}
-        for variable, idx in self.variable_indices.items():
-            variables[variable] = game_variables[idx]
+        if game_variables is not None:
+            for variable, idx in self.variable_indices.items():
+                variables[variable] = game_variables[idx]
         return variables
 
     @staticmethod

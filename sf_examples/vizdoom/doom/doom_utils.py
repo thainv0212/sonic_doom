@@ -94,6 +94,13 @@ DOOM_ENVS = [
         default_timeout=300,
     ),
     DoomSpec(
+        "doom_basic_new_design",
+        "basic_new_design.cfg",
+        Discrete(1 + 3),  # idle, left, right, attack
+        reward_scaling=0.01,
+        default_timeout=300,
+    ),
+    DoomSpec(
         "doom_two_colors_easy",
         "two_colors_easy.cfg",
         doom_action_space_basic(),
@@ -225,6 +232,7 @@ DOOM_ENVS = [
     # (no widescreen)
     DoomSpec("doom_benchmark", "battle.cfg", Discrete(1 + 8), 1.0, 2100),
     DoomSpec("doom_take_cover", "take_cover.cfg", Discrete(1 + 2), 1.0, -1),
+    DoomSpec("doom_predict_position", "predict_position.cfg", Discrete(1 + 3), 1.0, 300),
 ]
 
 
