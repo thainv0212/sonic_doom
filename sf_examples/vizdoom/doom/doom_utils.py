@@ -136,7 +136,9 @@ DOOM_ENVS = [
     DoomSpec("doom_defend_the_center_flat_actions", "defend_the_center.cfg", Discrete(1 + 3), 1.0),
     # "basic" single-player envs
     DoomSpec("doom_my_way_home", "my_way_home.cfg", doom_action_space_basic(), 1.0),
+    DoomSpec("doom_my_way_home_new_design", "my_way_home_new_design.cfg", doom_action_space_basic(), 1.0),
     DoomSpec("doom_deadly_corridor", "deadly_corridor.cfg", doom_action_space_extended(), 0.01),
+    DoomSpec("doom_deadly_corridor_new_design", "deadly_corridor_new_design.cfg", doom_action_space_extended(), 0.01),
     DoomSpec("doom_defend_the_center", "defend_the_center.cfg", doom_turn_and_attack_only(), 1.0, timelimit=1300),
     DoomSpec("doom_defend_the_line", "defend_the_line.cfg", doom_turn_and_attack_only(), 1.0, timelimit=1300),
     DoomSpec(
@@ -232,7 +234,10 @@ DOOM_ENVS = [
     # (no widescreen)
     DoomSpec("doom_benchmark", "battle.cfg", Discrete(1 + 8), 1.0, 2100),
     DoomSpec("doom_take_cover", "take_cover.cfg", Discrete(1 + 2), 1.0, -1),
+    DoomSpec("doom_take_cover_new_design", "take_cover_new_design.cfg", Discrete(1 + 2), 1.0, -1),
     DoomSpec("doom_predict_position", "predict_position.cfg", Discrete(1 + 3), 1.0, 300),
+    DoomSpec("doom_predict_position_new_design", "predict_position_new_design.cfg", Discrete(1 + 3), 1.0, 300),
+
 ]
 
 
