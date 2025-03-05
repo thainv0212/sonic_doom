@@ -468,7 +468,9 @@ class VizdoomEnv(gym.Env):
             audio_buffer = np.zeros([2520, 0])
 
             # when done=True Doom does not allow us to call get_info, so we provide info from the last frame
-            info.update(self._prev_info)
+            if self._prev_info is not None:
+                info.update(self._prev_info)
+
 
         self._vizdoom_variables_bug_workaround(info, done)
 
