@@ -21,3 +21,5 @@ Run the following command to start a training run on the basic scenario
 5. No vision + fft + sonic aim ```python -m sf_examples.vizdoom.train_vizdoom --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --num_workers=36 --num_envs_per_worker=8 --num_policies=1 --batch_size=2048 --wide_aspect_ratio=False  --env=doom_basic --use_sound --audio_encoder=fft --train_dir=train_dir/doom_basic_no_vision_fft_sonic_aim --encoder_conv_architecture=none --use_sonic_aim_support```
 
 All scenarios are available [here](sf_examples/vizdoom/doom/doom_utils.py).
+
+Training data for all scenarios is available [here.](https://drive.proton.me/urls/187JD4X2PC#kgaCjTpyEzp9).
