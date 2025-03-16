@@ -9,7 +9,7 @@
 # Run experiments
 Run the following command to start a training run on the basic scenario
 
-1. Vision only ```python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --train_dir=train_dir/doom_basic_no_sound``
+1. Vision only ```python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --train_dir=train_dir/doom_basic_no_sound```
 
 2. Vision + fft ```python -m sf_examples.vizdoom.train_vizdoom --env=doom_basic --train_for_env_steps=500000000 --algo=APPO --env_frameskip=4 --use_rnn=True --wide_aspect_ratio=False --num_workers=20 --num_envs_per_worker=16 --decorrelate_envs_on_one_worker=False --use_sound --audio_encoder=fft --train_dir=train_dir/doom_basic_vision_fft```
 
