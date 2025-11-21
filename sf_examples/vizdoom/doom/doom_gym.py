@@ -181,6 +181,7 @@ class VizdoomEnv(gym.Env):
         self.use_auto_aim_support = use_auto_aim_support
         self.use_sonic_aim_support = use_sonic_aim_support
         self.last_sonic_time = time.time()
+        self.step_count = 0
 
     def seed(self, seed: Optional[int] = None):
         """
@@ -404,6 +405,7 @@ class VizdoomEnv(gym.Env):
         self._prev_info = None
 
         self._num_episodes += 1
+        self.step_count = 0
 
         return {'img': np.transpose(img, (1, 2, 0)),
                 'audio': audio}, {}  # since Gym 0.26.0, we return dict as second return value
@@ -481,6 +483,7 @@ class VizdoomEnv(gym.Env):
         Action is either a single value (discrete, one-hot), or a tuple with an action for each of the
         discrete action subspaces.
         """
+        self.step_count += 1
         if self._actions_flattened is not None:
             # provided externally, e.g. via human play
             actions_flattened = self._actions_flattened
@@ -504,6 +507,18 @@ class VizdoomEnv(gym.Env):
         # Gym 0.26.0 changes
         terminated = done
         truncated = False
+        # episode_info = info.get('episode', {})
+        # episode_info['r'] = reward
+        # info['episode'] = episode_info
+        if done:
+            extras = info.get("episode_extra_stats", {}) or {}
+            extras.update({
+                "kills":self.game.get_game_variable(vzd.GameVariable.KILLCOUNT),
+                "health":self.game.get_game_variable(vzd.GameVariable.HEALTH),
+                "death": int(self.game.get_game_variable(vzd.GameVariable.HEALTH) <= 0),
+                "length": self.step_count
+            })
+            info['episode_extra_stats'] = extras
         return observation, reward, terminated, truncated, info
 
     def render(self) -> Optional[np.ndarray]:

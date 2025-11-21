@@ -6,6 +6,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 from torch import Tensor
+import json
 
 from sample_factory.algo.learning.learner import Learner
 from sample_factory.algo.sampling.batched_sampling import preprocess_actions
@@ -93,6 +94,7 @@ def load_state_dict(cfg: Config, actor_critic: ActorCritic, device: torch.device
     policy_id = cfg.policy_index
     name_prefix = dict(latest="checkpoint", best="best")[cfg.load_checkpoint_kind]
     checkpoints = Learner.get_checkpoints(Learner.checkpoint_dir(cfg, policy_id), f"{name_prefix}_*")
+    print("load checkpoint", checkpoints)
     checkpoint_dict = Learner.load_checkpoint(checkpoints, device)
     if checkpoint_dict:
         actor_critic.load_state_dict(checkpoint_dict["model"])
@@ -101,7 +103,7 @@ def load_state_dict(cfg: Config, actor_critic: ActorCritic, device: torch.device
 
 
 def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
-    verbose = False
+    verbose = True
 
     cfg = load_from_checkpoint(cfg)
 
@@ -120,6 +122,7 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
         render_mode = "rgb_array"
     elif cfg.no_render:
         render_mode = None
+    experiment_name = cfg.train_dir.split('/')[-1]
 
     env = make_env(cfg, render_mode=render_mode)
     env_info = extract_env_info(env, cfg)
@@ -138,6 +141,10 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
 
     episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     true_objectives = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    healths = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    kills = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    deaths = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    ep_lens = [deque([], maxlen=100) for _ in range(env.num_agents)]
     num_frames = 0
 
     last_render_start = time.time()
@@ -155,7 +162,7 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
 
     video_frames = []
     num_episodes = 0
-
+    log.info('test for %d episode', cfg.max_num_episodes)
     with torch.no_grad():
         while not max_frames_reached(num_frames):
             normalized_obs = prepare_and_normalize_obs(actor_critic, obs)
@@ -205,27 +212,40 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
                         true_objective = rew
                         if isinstance(infos, (list, tuple)):
                             true_objective = infos[agent_i].get("true_objective", rew)
+                            kill = infos[agent_i]['episode_extra_stats'].get("kills", 0)
+                            health = infos[agent_i]['episode_extra_stats'].get("health", -100)
+                            death = infos[agent_i]['episode_extra_stats'].get("death", 0)
+                            ep_len = infos[agent_i]['episode_extra_stats'].get("length", 0)
                         true_objectives[agent_i].append(true_objective)
+                        kills[agent_i].append(kill)
+                        healths[agent_i].append(health)
+                        deaths[agent_i].append(death)
+                        ep_lens[agent_i].append(ep_len)
 
                         if verbose:
                             log.info(
-                                "Episode finished for agent %d at %d frames. Reward: %.3f, true_objective: %.3f",
+                                "Episode finished for agent %d at %d frames. Reward: %.3f, true_objective: %.3f. Kill: %d. Health: %d. Death: %d. Num episode: %d",
                                 agent_i,
                                 num_frames,
                                 episode_reward[agent_i],
                                 true_objectives[agent_i][-1],
+                                kills[agent_i][-1],
+                                healths[agent_i][-1],
+                                deaths[agent_i][-1],
+                                num_episodes
                             )
                         rnn_states[agent_i] = torch.zeros([get_rnn_size(cfg)], dtype=torch.float32, device=device)
                         episode_reward[agent_i] = 0
-
-                        if cfg.use_record_episode_statistics:
-                            # we want the scores from the full episode not a single agent death (due to EpisodicLifeEnv wrapper)
-                            if "episode" in infos[agent_i].keys():
-                                num_episodes += 1
-                                reward_list.append(infos[agent_i]["episode"]["r"])
-                        else:
-                            num_episodes += 1
-                            reward_list.append(true_objective)
+                        num_episodes += 1
+                        reward_list.append(true_objective)
+                        # if cfg.use_record_episode_statistics:
+                        #     # we want the scores from the full episode not a single agent death (due to EpisodicLifeEnv wrapper)
+                        #     if "episode" in infos[agent_i].keys():
+                        #         num_episodes += 1
+                        #         reward_list.append(infos[agent_i]["episode"]["r"])
+                        # else:
+                        #     num_episodes += 1
+                        #     reward_list.append(true_objective)
 
                 # if episode terminated synchronously for all agents, pause a bit before starting a new one
                 if all(dones):
@@ -265,8 +285,15 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
 
             if num_episodes >= cfg.max_num_episodes:
                 break
-
     env.close()
+    with open(f'{experiment_name}.txt', 'w') as f:
+        f.write(json.dumps(
+            {'lengths': [list(i) for i in ep_lens],
+             'healths': [list(i) for i in healths],
+             'kills': [list(i) for i in kills],
+             'deaths': [list(i) for i in deaths]
+             }
+        ))
 
     if cfg.save_video:
         if cfg.fps > 0:

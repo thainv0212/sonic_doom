@@ -56,7 +56,10 @@ class VizdoomEncoder(Encoder):
             else:
                 x = torch.cat((x, measurements), dim=1)
         if self.sound_encoder is not None:
-            sound = self.sound_encoder(obs_dict["sound"].float())
+            if "audio" in obs_dict:
+                sound = self.sound_encoder(obs_dict["audio"].float())
+            else:
+                sound = self.sound_encoder(obs_dict["sound"].float())
             if x is not None:
                 x = torch.cat((x, sound.flatten(start_dim=1)), dim=1)
             else:

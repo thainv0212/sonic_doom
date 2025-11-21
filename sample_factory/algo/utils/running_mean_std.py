@@ -141,7 +141,12 @@ class RunningMeanStdDictInPlace(nn.Module):
 
     def forward(self, x: Dict[str, Tensor]) -> None:
         """Normalize in-place!"""
+        # print("keys", x.keys())
+        # for k in x.keys():
+        #     print(k, x[k].mean(), x[k].std(), x[k].max(), x[k].min())
         for k, module in self.running_mean_std.items():
+            if k == 'sound':
+                continue
             module(x[k])
 
 

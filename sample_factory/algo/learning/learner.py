@@ -278,7 +278,7 @@ class Learner(Configurable):
                 # noinspection PyBroadException
                 try:
                     log.warning("Loading state from checkpoint %s...", latest_checkpoint)
-                    checkpoint_dict = torch.load(latest_checkpoint, map_location=device)
+                    checkpoint_dict = torch.load(latest_checkpoint, map_location=device, weights_only=False)
                     return checkpoint_dict
                 except Exception:
                     log.exception(f"Could not load from checkpoint, attempt {attempt}")
