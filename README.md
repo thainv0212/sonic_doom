@@ -23,3 +23,5 @@ Run the following command to start a training run on the basic scenario
 All scenarios are available [here](sf_examples/vizdoom/doom/doom_utils.py).
 
 Training data for all scenarios is available [here.](https://drive.proton.me/urls/187JD4X2PC#kgaCjTpyEzp9).
+Training data for ablation experiments is available [here.](https://drive.proton.me/urls/HTZGBHWEM4#5xn4b2e9LEJs).
+
